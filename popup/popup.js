@@ -1,7 +1,7 @@
 const toggleButton = document.getElementById("toggle-enabled");
 const optionsLink = document.getElementById("options-link");
 
-let enabled = false;
+let enabled = true;
 
 const render = () => {
   toggleButton.textContent = enabled ? "Disable" : "Enable";
@@ -20,6 +20,6 @@ optionsLink.addEventListener("click", () => {
 
 // Get the initial state from storage and render the button.
 chrome.storage.sync.get("enabled", (data) => {
-  enabled = data.enabled || false;
+  enabled = data.enabled !== undefined ? data.enabled : true;
   render();
 });
