@@ -1,18 +1,45 @@
 console.log("[Vim-Extension] Content script loaded.");
 
 let sites = [];
-let enabled = false;
+let enabled = true;
 let mode = "insert"; // 'insert' or 'normal'
+
+let currentSiteMatch = false;
+
+const modeIndicator = document.createElement("div");
+modeIndicator.style.position = "fixed";
+modeIndicator.style.bottom = "10px";
+modeIndicator.style.right = "10px";
+modeIndicator.style.background = "rgba(0, 0, 0, 0.7)";
+modeIndicator.style.color = "#fff";
+modeIndicator.style.padding = "2px 6px";
+modeIndicator.style.borderRadius = "4px";
+modeIndicator.style.fontSize = "12px";
+modeIndicator.style.fontFamily = "monospace";
+modeIndicator.style.zIndex = "2147483647";
+modeIndicator.style.pointerEvents = "none";
+modeIndicator.style.display = "none";
+document.documentElement.appendChild(modeIndicator);
+
+const updateIndicator = () => {
+  if (enabled && currentSiteMatch) {
+    modeIndicator.textContent = mode.toUpperCase();
+    modeIndicator.style.display = "block";
+  } else {
+    modeIndicator.style.display = "none";
+  }
+};
 
 // --- State Management ---
 
 const updateState = () => {
   chrome.storage.sync.get(["sites", "enabled"], (data) => {
     sites = data.sites || [];
-    enabled = data.enabled !== undefined ? data.enabled : false;
+    enabled = data.enabled !== undefined ? data.enabled : true;
     console.log(
       `[Vim-Extension] State updated: Enabled=${enabled}, Sites=${JSON.stringify(sites)}`,
     );
+    updateIndicator();
   });
 };
 
@@ -23,6 +50,7 @@ chrome.storage.onChanged.addListener((changes, namespace) => {
     if (changes.enabled && !changes.enabled.newValue) {
       mode = "insert";
     }
+    updateIndicator();
   }
 });
 
@@ -100,6 +128,7 @@ const setCursorPosition = (element, position) => {
 const setMode = (newMode) => {
   mode = newMode;
   console.log(`[Vim-Extension] Mode changed to: ${newMode}`);
+  updateIndicator();
 };
 
 const getLineInfo = (text, cursor) => {
@@ -117,16 +146,21 @@ const getLineInfo = (text, cursor) => {
   return { lines, lineIndex, lineStart };
 };
 
+const escapeRegex = (str) =>
+  str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+const siteToRegex = (site) =>
+  new RegExp("^" + escapeRegex(site).replace(/\\\*/g, ".*") + "$");
+
 document.addEventListener(
   "keydown",
   (event) => {
     console.log(`[Vim-Extension] Keydown event: ${event.key}`);
     const currentUrl = window.location.href;
-    const isSiteMatch = sites.some((site) =>
-      currentUrl.match(new RegExp(site.replace(/\*/g, ".*"))),
-    );
+    currentSiteMatch = sites.some((site) => currentUrl.match(siteToRegex(site)));
+    updateIndicator();
 
-    if (!enabled || !isSiteMatch) {
+    if (!enabled || !currentSiteMatch) {
       console.log("[Vim-Extension] Not active on this site or disabled.");
       return;
     }
