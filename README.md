@@ -12,3 +12,6 @@ to enter **Normal** mode and use the following commands:
 
 Manage the list of active sites through the extension's options page.
 
+Use the popup to toggle the extension or quickly open the options page.
+A small mode indicator appears in the corner to show the current mode.
+
