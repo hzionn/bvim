@@ -1,4 +1,4 @@
-# browser-vim
+# quick-vim
 
 This extension enables a small set of Vim keybindings inside text fields on
 selected websites. Press `Esc` in a text area, input, or other editable element
