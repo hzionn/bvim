@@ -174,6 +174,7 @@ document.addEventListener(
     if (event.key === "Escape") {
       event.preventDefault();
       event.stopPropagation();
+      event.stopImmediatePropagation();
       setMode("normal");
       return;
     }
@@ -181,6 +182,7 @@ document.addEventListener(
     if (mode === "normal") {
       event.preventDefault();
       event.stopPropagation();
+      event.stopImmediatePropagation();
       console.log(`[Vim-Extension] Normal mode command: ${event.key}`);
       const cursor = getCursorPosition(activeElement);
       const text = getText(activeElement);
