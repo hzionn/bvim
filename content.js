@@ -183,10 +183,11 @@ document.addEventListener(
       event.preventDefault();
       event.stopPropagation();
       event.stopImmediatePropagation();
-      console.log(`[Vim-Extension] Normal mode command: ${event.key}`);
+      const key = event.key.toLowerCase();
+      console.log(`[Vim-Extension] Normal mode command: ${key}`);
       const cursor = getCursorPosition(activeElement);
       const text = getText(activeElement);
-      switch (event.key) {
+      switch (key) {
         case "i":
           setMode("insert");
           break;
@@ -219,6 +220,21 @@ document.addEventListener(
               Math.min(cursorInLine, lines[lineIndex + 1].length);
             setCursorPosition(activeElement, newCursor);
           }
+          break;
+        }
+        case "w": {
+          let pos = cursor;
+          while (pos < text.length && /\w/.test(text[pos])) pos++;
+          while (pos < text.length && /\s/.test(text[pos])) pos++;
+          setCursorPosition(activeElement, pos);
+          break;
+        }
+        case "b": {
+          let pos = cursor;
+          if (pos > 0) pos--;
+          while (pos > 0 && /\s/.test(text[pos])) pos--;
+          while (pos > 0 && /\w/.test(text[pos - 1])) pos--;
+          setCursorPosition(activeElement, pos);
           break;
         }
       }
