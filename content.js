@@ -3,7 +3,7 @@ console.log("[Vim-Extension] Content script loaded.");
 // Add CSS for cursor color changes
 const addCursorStyles = () => {
   if (document.getElementById('vim-cursor-styles')) return; // Already added
-  
+
   const style = document.createElement('style');
   style.id = 'vim-cursor-styles';
   style.textContent = `
@@ -32,10 +32,33 @@ let sites = [];
 let enabled = true;
 let coloredIndicator = true;
 let coloredCursor = true;
-let mode = "insert"; // 'insert' or 'normal'
-let pendingCommand = null; // For multi-key sequences like 'dw', 'cw'
-
 let currentSiteMatch = false;
+
+// Initialize the FSM
+let vimFSM = null;
+
+// Initialize FSM when available
+const initializeFSM = () => {
+  if (window.VimStateMachine && !vimFSM) {
+    vimFSM = new window.VimStateMachine();
+
+    // Add listener for state changes
+    vimFSM.addListener((stateInfo) => {
+      console.log(`[Vim-Extension] FSM state changed: ${stateInfo.oldState} → ${stateInfo.newState}`);
+      updateIndicator();
+
+      // Update cursor color for current element
+      const activeElement = document.activeElement;
+      if (activeElement) {
+        updateCursorColor(activeElement);
+      }
+    });
+
+    console.log("[Vim-Extension] FSM initialized successfully");
+    return true;
+  }
+  return false;
+};
 
 const modeIndicator = document.createElement("div");
 modeIndicator.style.position = "fixed";
@@ -53,15 +76,15 @@ modeIndicator.style.display = "none";
 document.documentElement.appendChild(modeIndicator);
 
 const updateIndicator = () => {
-  if (enabled && currentSiteMatch) {
-    modeIndicator.textContent = mode.toUpperCase();
-    
+  if (enabled && currentSiteMatch && vimFSM) {
+    modeIndicator.textContent = vimFSM.getDisplayName();
+
     // Apply colors based on user preference and mode
     if (coloredIndicator) {
-      if (mode === "normal") {
+      if (vimFSM.isNormalMode()) {
         modeIndicator.style.background = "rgba(220, 53, 69, 0.8)"; // Red for normal mode
         modeIndicator.style.color = "#fff";
-      } else if (mode === "insert") {
+      } else if (vimFSM.isInsertMode()) {
         modeIndicator.style.background = "rgba(40, 167, 69, 0.8)"; // Green for insert mode
         modeIndicator.style.color = "#fff";
       }
@@ -70,7 +93,7 @@ const updateIndicator = () => {
       modeIndicator.style.background = "rgba(0, 0, 0, 0.7)";
       modeIndicator.style.color = "#fff";
     }
-    
+
     modeIndicator.style.display = "block";
   } else {
     modeIndicator.style.display = "none";
@@ -112,8 +135,8 @@ chrome.storage.onChanged.addListener((changes, namespace) => {
   if (namespace === "sync") {
     console.log("[Vim-Extension] Storage changed, updating state.");
     updateState();
-    if (changes.enabled && !changes.enabled.newValue) {
-      mode = "insert";
+    if (changes.enabled && !changes.enabled.newValue && vimFSM) {
+      vimFSM.setState("INSERT");
     }
     updateIndicator();
   }
@@ -121,13 +144,16 @@ chrome.storage.onChanged.addListener((changes, namespace) => {
 
 updateState();
 
+// Initialize FSM
+initializeFSM();
+
 // Import vim motion functions from vim-motions.js
 // Since vim-motions.js is loaded first, window.VimMotions is available
-const { 
-  isEditable, 
-  getText, 
-  getCursorPosition, 
-  setCursorPosition, 
+const {
+  isEditable,
+  getText,
+  getCursorPosition,
+  setCursorPosition,
   getLineInfo,
   moveLeft,
   moveRight,
@@ -144,34 +170,44 @@ const {
 
 // Cursor color management
 const updateCursorColor = (element) => {
-  if (!element || !isEditable(element)) return;
-  
+  if (!element || !isEditable(element) || !vimFSM) return;
+
   // Remove all vim mode classes
   element.classList.remove('vim-normal-mode', 'vim-insert-mode');
-  
+
   // Only apply cursor colors if the feature is enabled
   if (coloredCursor) {
-    // Add appropriate class based on current mode
-    if (mode === "normal") {
-      element.classList.add('vim-normal-mode');
-      console.log("[Vim-Extension] Applied red cursor for normal mode");
-    } else if (mode === "insert") {
-      element.classList.add('vim-insert-mode');
-      console.log("[Vim-Extension] Applied green cursor for insert mode");
+    // Add appropriate class based on current FSM state
+    const cursorClass = vimFSM.getCursorClass();
+    if (cursorClass) {
+      element.classList.add(cursorClass);
+      console.log(`[Vim-Extension] Applied cursor class '${cursorClass}' for state '${vimFSM.getDisplayName()}'`);
     }
   } else {
     console.log("[Vim-Extension] Cursor coloring disabled, not applying colors");
   }
 };
 
+// FSM-based mode management (setMode is now handled by the FSM)
+// This is a compatibility function for any remaining legacy code
 const setMode = (newMode) => {
-  mode = newMode;
-  console.log(`[Vim-Extension] Mode changed to: ${newMode}`);
-  updateIndicator();
-  
-  // Update cursor color for the currently active element
-  const activeElement = document.activeElement;
-  updateCursorColor(activeElement);
+  if (!vimFSM) {
+    console.warn("[Vim-Extension] setMode called but FSM not initialized");
+    return;
+  }
+
+  // Map old mode names to FSM states
+  const stateMap = {
+    'insert': 'INSERT',
+    'normal': 'NORMAL'
+  };
+
+  const fsmState = stateMap[newMode];
+  if (fsmState) {
+    vimFSM.setState(fsmState);
+  } else {
+    console.warn(`[Vim-Extension] Unknown mode: ${newMode}`);
+  }
 };
 
 
@@ -188,7 +224,7 @@ document.addEventListener("focusin", (event) => {
     // Check if current site is in the enabled sites list
     const currentUrl = window.location.href;
     const siteMatch = sites.some((site) => currentUrl.match(siteToRegex(site)));
-    
+
     if (siteMatch) {
       updateCursorColor(event.target);
       console.log("[Vim-Extension] Focus event - updated cursor color");
@@ -258,87 +294,45 @@ document.addEventListener(
     // Update cursor color for the current element
     updateCursorColor(activeElement);
 
-    if (event.key === "Escape") {
-      event.preventDefault();
-      event.stopPropagation();
-      event.stopImmediatePropagation();
-      pendingCommand = null; // Clear any pending command
-      setMode("normal");
+    // FSM-based input handling
+    if (!vimFSM) {
+      console.warn("[Vim-Extension] FSM not initialized, skipping vim processing");
       return;
     }
 
-    if (mode === "normal") {
+    // Process the input through the FSM
+    const key = event.key === "Escape" ? "Escape" : event.key.toLowerCase();
+    const result = vimFSM.processInput(key, activeElement);
+
+    // If FSM handled the input, prevent default behavior
+    if (result.stateChanged || result.action) {
       event.preventDefault();
       event.stopPropagation();
       event.stopImmediatePropagation();
-      const key = event.key.toLowerCase();
-      console.log(`[Vim-Extension] Normal mode command: ${key}, pending: ${pendingCommand}`);
-      
-      // Handle multi-key sequences
-      if (pendingCommand) {
-        if (key === "w") {
-          switch (pendingCommand) {
-            case "d":
-              console.log("[Vim-Extension] Executing dw (delete word)");
-              deleteWord(activeElement);
-              break;
-            case "c":
-              console.log("[Vim-Extension] Executing cw (change word)");
-              if (changeWord(activeElement)) {
-                setMode("insert");
-              }
-              break;
-          }
-        } else {
-          console.log(`[Vim-Extension] Invalid motion '${key}' after '${pendingCommand}', canceling command`);
-        }
-        // Clear pending command after processing (success or failure)
-        pendingCommand = null;
-        return;
-      }
-      
-      // Handle single key commands and command initiators
-      switch (key) {
-        case "i":
-          setMode("insert");
-          break;
-        case "h":
-        case "arrowleft":
-          moveLeft(activeElement);
-          break;
-        case "l":
-        case "arrowright":
-          moveRight(activeElement);
-          break;
-        case "k":
-        case "arrowup":
-          moveUp(activeElement);
-          break;
-        case "j":
-        case "arrowdown":
-          moveDown(activeElement);
-          break;
-        case "w":
-          moveWordForward(activeElement);
-          break;
-        case "b":
-          moveWordBackward(activeElement);
-          break;
-        case "d":
-          pendingCommand = "d";
-          console.log("[Vim-Extension] Waiting for motion after 'd'");
-          break;
-        case "c":
-          pendingCommand = "c";
-          console.log("[Vim-Extension] Waiting for motion after 'c'");
-          break;
-        default:
-          // Clear any pending command on unrecognized key
-          if (pendingCommand) {
-            console.log(`[Vim-Extension] Clearing pending command '${pendingCommand}' due to unrecognized key '${key}'`);
-            pendingCommand = null;
-          }
-          break;
+    }
+
+    // Execute any action returned by the FSM
+    if (result.action && result.actionData) {
+      const { element } = result.actionData;
+      console.log(`[Vim-Extension] Executing action: ${result.action}`);
+
+      // Map FSM action names to actual functions
+      const actionMap = {
+        'moveLeft': () => moveLeft(element),
+        'moveRight': () => moveRight(element),
+        'moveUp': () => moveUp(element),
+        'moveDown': () => moveDown(element),
+        'moveWordForward': () => moveWordForward(element),
+        'moveWordBackward': () => moveWordBackward(element),
+        'deleteWord': () => deleteWord(element),
+        'changeWord': () => changeWord(element)
+      };
+
+      const actionFn = actionMap[result.action];
+      if (actionFn) {
+        actionFn();
+      } else {
+        console.warn(`[Vim-Extension] Unknown action: ${result.action}`);
       }
     }
   },

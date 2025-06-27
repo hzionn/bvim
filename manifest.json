@@ -15,6 +15,7 @@
       ],
       "js": [
         "vim-motions.js",
+        "vim-state-machine.js",
         "content.js"
       ]
     }
