@@ -1,11 +1,14 @@
-// Guard against multiple script injections
-if (window.VimExtensionLoaded) {
-  console.log("[Vim-Extension] Content script already loaded, skipping");
-  return;
-}
-window.VimExtensionLoaded = true;
+(function() {
+  'use strict';
+  
+  // Guard against multiple script injections
+  if (window.VimExtensionLoaded) {
+    console.log("[Vim-Extension] Content script already loaded, skipping");
+    return;
+  }
+  window.VimExtensionLoaded = true;
 
-console.log("[Vim-Extension] Content script loaded.");
+  console.log("[Vim-Extension] Content script loaded.");
 
 // Add CSS for cursor color changes
 const addCursorStyles = () => {
@@ -334,4 +337,6 @@ document.addEventListener(
   },
   true,
 );
+
+})(); // End of IIFE
 
