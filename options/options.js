@@ -1,8 +1,10 @@
 const sitesList = document.getElementById("sites-list");
 const addSiteForm = document.getElementById("add-site-form");
 const newSiteInput = document.getElementById("new-site");
+const toggleButton = document.getElementById("toggle-enabled");
 
 let sites = [];
+let enabled = true;
 
 const renderSites = () => {
   sitesList.innerHTML = "";
@@ -21,6 +23,10 @@ const renderSites = () => {
   });
 };
 
+const renderToggle = () => {
+  toggleButton.textContent = enabled ? "Disable" : "Enable";
+};
+
 addSiteForm.addEventListener("submit", (e) => {
   e.preventDefault();
   const newSite = newSiteInput.value;
@@ -32,7 +38,16 @@ addSiteForm.addEventListener("submit", (e) => {
   }
 });
 
-chrome.storage.sync.get("sites", (data) => {
+toggleButton.addEventListener("click", () => {
+  enabled = !enabled;
+  chrome.storage.sync.set({ enabled });
+  renderToggle();
+});
+
+// Get the initial state from storage and render
+chrome.storage.sync.get(["sites", "enabled"], (data) => {
   sites = data.sites || [];
+  enabled = data.enabled !== undefined ? data.enabled : true;
   renderSites();
+  renderToggle();
 });

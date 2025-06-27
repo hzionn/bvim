@@ -32,9 +32,25 @@ const updateIndicator = () => {
 
 // --- State Management ---
 
+// Default sites that will be pre-added on first install
+const defaultSites = [
+  "https://github.com/*",
+  "https://chatgpt.com/*",
+  "https://gemini.google.com/*",
+  "https://www.notion.so/*"
+];
+
 const updateState = () => {
   chrome.storage.sync.get(["sites", "enabled"], (data) => {
-    sites = data.sites || [];
+    // If no sites exist, initialize with defaults
+    if (!data.sites || data.sites.length === 0) {
+      sites = [...defaultSites];
+      chrome.storage.sync.set({ sites }); // Save defaults to storage
+      console.log("[Vim-Extension] Initialized with default sites");
+    } else {
+      sites = data.sites;
+    }
+
     enabled = data.enabled !== undefined ? data.enabled : true;
     console.log(
       `[Vim-Extension] State updated: Enabled=${enabled}, Sites=${JSON.stringify(sites)}`,
@@ -72,7 +88,20 @@ const isEditable = (element) => {
 const getText = (element) => {
   if (element.tagName === "TEXTAREA" || element.tagName === "INPUT")
     return element.value;
-  if (element.isContentEditable) return element.textContent;
+  if (element.isContentEditable) {
+    // For contentEditable, we need to preserve line breaks
+    // Clone the element to avoid modifying the original
+    const clone = element.cloneNode(true);
+    // Replace <br> tags with newlines
+    clone.querySelectorAll('br').forEach(br => br.replaceWith('\n'));
+    // Replace block elements (div, p) with newlines  
+    clone.querySelectorAll('div, p').forEach(block => {
+      if (block.nextSibling) {
+        block.after('\n');
+      }
+    });
+    return clone.textContent || clone.innerText || '';
+  }
   return "";
 };
 
@@ -133,6 +162,7 @@ const setMode = (newMode) => {
 
 const getLineInfo = (text, cursor) => {
   const lines = text.split("\n");
+
   let lineIndex = 0,
     lineStart = 0;
   for (let i = 0; i < lines.length; i++) {
@@ -143,7 +173,83 @@ const getLineInfo = (text, cursor) => {
     }
     lineStart += line.length + 1;
   }
+
   return { lines, lineIndex, lineStart };
+};
+
+// --- Universal Movement Functions ---
+
+const moveLeft = (element) => {
+  const cursor = getCursorPosition(element);
+  if (cursor > 0) {
+    setCursorPosition(element, cursor - 1);
+    return true;
+  }
+  return false;
+};
+
+const moveRight = (element) => {
+  const cursor = getCursorPosition(element);
+  const text = getText(element);
+  if (cursor < text.length) {
+    setCursorPosition(element, cursor + 1);
+    return true;
+  }
+  return false;
+};
+
+const moveUp = (element) => {
+  const cursor = getCursorPosition(element);
+  const text = getText(element);
+  const { lines, lineIndex, lineStart } = getLineInfo(text, cursor);
+
+  if (lineIndex > 0) {
+    const cursorInLine = cursor - lineStart;
+    let prevLineStart = 0;
+    for (let i = 0; i < lineIndex - 1; i++) {
+      prevLineStart += lines[i].length + 1;
+    }
+    const newCursor = prevLineStart + Math.min(cursorInLine, lines[lineIndex - 1].length);
+    setCursorPosition(element, newCursor);
+    return true;
+  }
+  return false;
+};
+
+const moveDown = (element) => {
+  const cursor = getCursorPosition(element);
+  const text = getText(element);
+  const { lines, lineIndex, lineStart } = getLineInfo(text, cursor);
+
+  if (lineIndex < lines.length - 1) {
+    const cursorInLine = cursor - lineStart;
+    const nextLineStart = lineStart + lines[lineIndex].length + 1;
+    const newCursor = nextLineStart + Math.min(cursorInLine, lines[lineIndex + 1].length);
+    setCursorPosition(element, newCursor);
+    return true;
+  }
+  return false;
+};
+
+const moveWordForward = (element) => {
+  const cursor = getCursorPosition(element);
+  const text = getText(element);
+  let pos = cursor;
+  while (pos < text.length && /\w/.test(text[pos])) pos++;
+  while (pos < text.length && /\s/.test(text[pos])) pos++;
+  setCursorPosition(element, pos);
+  return true;
+};
+
+const moveWordBackward = (element) => {
+  const cursor = getCursorPosition(element);
+  const text = getText(element);
+  let pos = cursor;
+  if (pos > 0) pos--;
+  while (pos > 0 && /\s/.test(text[pos])) pos--;
+  while (pos > 0 && /\w/.test(text[pos - 1])) pos--;
+  setCursorPosition(element, pos);
+  return true;
 };
 
 const escapeRegex = (str) =>
@@ -158,14 +264,54 @@ document.addEventListener(
     console.log(`[Vim-Extension] Keydown event: ${event.key}`);
     const currentUrl = window.location.href;
     currentSiteMatch = sites.some((site) => currentUrl.match(siteToRegex(site)));
+    console.log(`[Vim-Extension] Current URL: ${currentUrl}`);
+    console.log(`[Vim-Extension] Sites list: ${JSON.stringify(sites)}`);
+    console.log(`[Vim-Extension] Site match: ${currentSiteMatch}, Enabled: ${enabled}`);
     updateIndicator();
 
+    const activeElement = document.activeElement;
+
+    // --- UNIVERSAL ARROW KEYS (work regardless of site/enabled state) ---
+    if (isEditable(activeElement)) {
+      const key = event.key.toLowerCase();
+      let handled = false;
+
+      switch (key) {
+        case "arrowleft":
+          console.log("[Vim-Extension] Universal arrow left");
+          event.preventDefault();
+          handled = moveLeft(activeElement);
+          break;
+        case "arrowright":
+          console.log("[Vim-Extension] Universal arrow right");
+          event.preventDefault();
+          handled = moveRight(activeElement);
+          break;
+        case "arrowup":
+          console.log("[Vim-Extension] Universal arrow up");
+          event.preventDefault();
+          handled = moveUp(activeElement);
+          break;
+        case "arrowdown":
+          console.log("[Vim-Extension] Universal arrow down");
+          event.preventDefault();
+          handled = moveDown(activeElement);
+          break;
+      }
+
+      if (handled) {
+        event.stopPropagation();
+        event.stopImmediatePropagation();
+        return; // Exit early, arrow key was handled
+      }
+    }
+
+    // --- SITE-SPECIFIC VIM FUNCTIONALITY ---
     if (!enabled || !currentSiteMatch) {
       console.log("[Vim-Extension] Not active on this site or disabled.");
       return;
     }
 
-    const activeElement = document.activeElement;
     console.log("[Vim-Extension] Active element:", activeElement);
     if (!isEditable(activeElement)) {
       return;
@@ -192,51 +338,27 @@ document.addEventListener(
           setMode("insert");
           break;
         case "h":
-          if (cursor > 0) setCursorPosition(activeElement, cursor - 1);
+        case "arrowleft":
+          moveLeft(activeElement);
           break;
         case "l":
-          if (cursor < text.length)
-            setCursorPosition(activeElement, cursor + 1);
+        case "arrowright":
+          moveRight(activeElement);
           break;
-        case "k": {
-          const { lines, lineIndex, lineStart } = getLineInfo(text, cursor);
-          if (lineIndex > 0) {
-            const cursorInLine = cursor - lineStart;
-            const prevLineStart = text.lastIndexOf("\n", lineStart - 2) + 1;
-            const newCursor =
-              prevLineStart +
-              Math.min(cursorInLine, lines[lineIndex - 1].length);
-            setCursorPosition(activeElement, newCursor);
-          }
+        case "k":
+        case "arrowup":
+          moveUp(activeElement);
           break;
-        }
-        case "j": {
-          const { lines, lineIndex, lineStart } = getLineInfo(text, cursor);
-          if (lineIndex < lines.length - 1) {
-            const cursorInLine = cursor - lineStart;
-            const nextLineStart = lineStart + lines[lineIndex].length + 1;
-            const newCursor =
-              nextLineStart +
-              Math.min(cursorInLine, lines[lineIndex + 1].length);
-            setCursorPosition(activeElement, newCursor);
-          }
+        case "j":
+        case "arrowdown":
+          moveDown(activeElement);
           break;
-        }
-        case "w": {
-          let pos = cursor;
-          while (pos < text.length && /\w/.test(text[pos])) pos++;
-          while (pos < text.length && /\s/.test(text[pos])) pos++;
-          setCursorPosition(activeElement, pos);
+        case "w":
+          moveWordForward(activeElement);
           break;
-        }
-        case "b": {
-          let pos = cursor;
-          if (pos > 0) pos--;
-          while (pos > 0 && /\s/.test(text[pos])) pos--;
-          while (pos > 0 && /\w/.test(text[pos - 1])) pos--;
-          setCursorPosition(activeElement, pos);
+        case "b":
+          moveWordBackward(activeElement);
           break;
-        }
       }
     }
   },
