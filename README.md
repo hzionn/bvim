@@ -1,6 +1,6 @@
-# Quick Vim
+# Bvim
 
-A Chrome extension that brings essential Vim keybindings to text fields on your favorite websites. Navigate and edit text with familiar Vim motions without leaving your browser.
+**B**rowser **Vim** - A Chrome extension that brings basic, essential Vim keybindings to text fields on your favorite websites. Navigate and edit text with familiar Vim motions without leaving your browser.
 
 ## Features
 

@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "quick-vim",
+  "name": "bvim",
   "version": "0.1.0",
   "description": "Use basic Vim keybindings in text fields on specified websites.",
   "permissions": [
