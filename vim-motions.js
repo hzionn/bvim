@@ -189,6 +189,27 @@
 
   // --- Text Modification Functions ---
 
+  /**
+   * Deletes text between the specified start and end positions in an editable element.
+   * 
+   * This function handles different types of editable elements (textarea, input, contentEditable)
+   * and ensures proper event firing for compatibility with modern web frameworks like React.
+   * After deletion, the cursor is positioned at the start position.
+   * 
+   * @param {HTMLElement} element - The editable element (textarea, input, or contentEditable)
+   * @param {number} startPos - The starting position (inclusive) of text to delete
+   * @param {number} endPos - The ending position (exclusive) of text to delete
+   * 
+   * @example
+   * // Delete characters 5-10 in a textarea
+   * deleteText(textareaElement, 5, 10);
+   * 
+   * @example
+   * // Delete a single character at position 3
+   * deleteText(inputElement, 3, 4);
+   * 
+   * @throws {Error} Implicitly - if element is not editable or positions are invalid
+   */
   const deleteText = (element, startPos, endPos) => {
     console.log(`[Vim-Extension] deleteText called: startPos=${startPos}, endPos=${endPos}`);
 
@@ -256,15 +277,16 @@
     }
   };
 
+  /**
+   * Deletes a word including any trailing whitespace (for 'dw' motion).
+   * This matches Vim's behavior where 'dw' deletes from cursor to the beginning of the next word.
+   */
   const deleteWord = (element) => {
     const cursor = getCursorPosition(element);
     const text = getText(element);
     let endPos = cursor;
 
-    console.log(`[Vim-Extension] deleteWord: cursor=${cursor}, text="${text}", char at cursor="${text[cursor]}"`);
-
-    // Find end of current word (non-whitespace characters including punctuation)
-    while (endPos < text.length && !/\s/.test(text[endPos])) endPos++;
+    console.log(`[Vim-Extension] deleteWord (dw): cursor=${cursor}, text="${text}", char at cursor="${text[cursor]}"`);
 
     // If cursor is on whitespace, find the next word and delete it
     if (cursor < text.length && /\s/.test(text[cursor])) {
@@ -273,23 +295,56 @@
       while (endPos < text.length && /\s/.test(text[endPos])) endPos++;
       // Find end of next word
       while (endPos < text.length && !/\s/.test(text[endPos])) endPos++;
+    } else {
+      // Find end of current word (non-whitespace characters including punctuation)
+      while (endPos < text.length && !/\s/.test(text[endPos])) endPos++;
+      
+      // For 'dw', also include trailing whitespace
+      while (endPos < text.length && /\s/.test(text[endPos])) endPos++;
     }
 
-    console.log(`[Vim-Extension] deleteWord: will delete from ${cursor} to ${endPos}, text to delete: "${text.slice(cursor, endPos)}"`);
+    console.log(`[Vim-Extension] deleteWord (dw): will delete from ${cursor} to ${endPos}, text to delete: "${text.slice(cursor, endPos)}"`);
 
     if (endPos > cursor) {
       deleteText(element, cursor, endPos);
       return true;
     }
-    console.log(`[Vim-Extension] deleteWord: nothing to delete`);
+    console.log(`[Vim-Extension] deleteWord (dw): nothing to delete`);
     return false;
   };
 
+  /**
+   * Deletes a word without trailing whitespace (for 'cw' motion).
+   * This matches Vim's behavior where 'cw' changes only the word itself.
+   */
   const changeWord = (element) => {
-    // Delete the word first
-    const deleted = deleteWord(element);
-    // Return whether we deleted something (content.js will handle mode switch)
-    return deleted;
+    const cursor = getCursorPosition(element);
+    const text = getText(element);
+    let endPos = cursor;
+
+    console.log(`[Vim-Extension] changeWord (cw): cursor=${cursor}, text="${text}", char at cursor="${text[cursor]}"`);
+
+    // If cursor is on whitespace, find the next word and delete it (without trailing space)
+    if (cursor < text.length && /\s/.test(text[cursor])) {
+      console.log(`[Vim-Extension] Cursor on whitespace, finding next word`);
+      // Skip whitespace to find start of next word
+      while (endPos < text.length && /\s/.test(text[endPos])) endPos++;
+      // Find end of next word
+      while (endPos < text.length && !/\s/.test(text[endPos])) endPos++;
+    } else {
+      // Find end of current word (non-whitespace characters including punctuation)
+      // For 'cw', do NOT include trailing whitespace
+      while (endPos < text.length && !/\s/.test(text[endPos])) endPos++;
+    }
+
+    console.log(`[Vim-Extension] changeWord (cw): will delete from ${cursor} to ${endPos}, text to delete: "${text.slice(cursor, endPos)}"`);
+
+    if (endPos > cursor) {
+      deleteText(element, cursor, endPos);
+      return true;
+    }
+    console.log(`[Vim-Extension] changeWord (cw): nothing to delete`);
+    return false;
   };
 
   // --- Future vim motions can be added here ---

@@ -5,19 +5,20 @@
   "description": "Use basic Vim keybindings in text fields on specified websites.",
   "permissions": [
     "storage",
-    "activeTab"
+    "activeTab",
+    "scripting"
+  ],
+  "host_permissions": [
+    "<all_urls>"
   ],
   "options_page": "options/options.html",
-  "content_scripts": [
+  "background": {
+    "service_worker": "background.js"
+  },
+  "web_accessible_resources": [
     {
-      "matches": [
-        "<all_urls>"
-      ],
-      "js": [
-        "vim-motions.js",
-        "vim-state-machine.js",
-        "content.js"
-      ]
+      "resources": ["shared-utils.js"],
+      "matches": ["<all_urls>"]
     }
   ],
   "icons": {

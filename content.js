@@ -102,19 +102,14 @@ const updateIndicator = () => {
 
 // --- State Management ---
 
-// Default sites that will be pre-added on first install
-const defaultSites = [
-  "https://github.com/*",
-  "https://chatgpt.com/*",
-  "https://gemini.google.com/*",
-  "https://www.notion.so/*"
-];
+// Import shared utilities (injected before this script)
+const { DEFAULT_SITES, siteToRegex, urlMatchesSites } = window.VimSharedUtils;
 
 const updateState = () => {
   chrome.storage.sync.get(["sites", "enabled", "coloredIndicator", "coloredCursor"], (data) => {
     // If no sites exist, initialize with defaults
     if (!data.sites || data.sites.length === 0) {
-      sites = [...defaultSites];
+      sites = [...DEFAULT_SITES];
       chrome.storage.sync.set({ sites }); // Save defaults to storage
       console.log("[Vim-Extension] Initialized with default sites");
     } else {
@@ -212,18 +207,12 @@ const setMode = (newMode) => {
 
 
 
-const escapeRegex = (str) =>
-  str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-
-const siteToRegex = (site) =>
-  new RegExp("^" + escapeRegex(site).replace(/\\\*/g, ".*") + "$");
-
 // Add focus event listener to update cursor color when clicking into text fields
 document.addEventListener("focusin", (event) => {
   if (isEditable(event.target) && enabled) {
     // Check if current site is in the enabled sites list
     const currentUrl = window.location.href;
-    const siteMatch = sites.some((site) => currentUrl.match(siteToRegex(site)));
+    const siteMatch = urlMatchesSites(currentUrl, sites);
 
     if (siteMatch) {
       updateCursorColor(event.target);
@@ -237,7 +226,7 @@ document.addEventListener(
   (event) => {
     console.log(`[Vim-Extension] Keydown event: ${event.key}`);
     const currentUrl = window.location.href;
-    currentSiteMatch = sites.some((site) => currentUrl.match(siteToRegex(site)));
+    currentSiteMatch = urlMatchesSites(currentUrl, sites);
     console.log(`[Vim-Extension] Current URL: ${currentUrl}`);
     console.log(`[Vim-Extension] Sites list: ${JSON.stringify(sites)}`);
     console.log(`[Vim-Extension] Site match: ${currentSiteMatch}, Enabled: ${enabled}`);
