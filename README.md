@@ -109,6 +109,6 @@ This extension uses:
 - **Finite State Machine** for robust mode management and command processing
 - **Event-driven architecture** for responsive text editing and React compatibility
 
-## License
+---
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+> ⭐ **If Bvim helps improve your browsing experience, please consider starring this repository!** Your support helps others discover this project and motivates continued development.
