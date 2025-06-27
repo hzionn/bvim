@@ -55,6 +55,8 @@ Access the options page to customize your experience:
 - **Mode Indicator Colors** - Choose between colored indicators (red for Normal, green for Insert) or classic black
 - **Cursor Colors** - Enable/disable cursor color changes for mode indication
 
+![Options screenshot](./options-screenshot.png)
+
 ### Default Enabled Sites
 
 - GitHub (`https://github.com/*`)
