@@ -1,7 +1,7 @@
 // vim-motions.js - Vim motion utilities and functions
 // This file is loaded before content.js and makes functions available globally
 
-(function() {
+(function () {
   'use strict';
 
   // --- Element & Cursor Abstraction ---
@@ -159,13 +159,13 @@
     const cursor = getCursorPosition(element);
     const text = getText(element);
     let pos = cursor;
-    
+
     // Skip over current word (non-whitespace characters including punctuation)
     while (pos < text.length && !/\s/.test(text[pos])) pos++;
-    
+
     // Skip over whitespace to get to the next word
     while (pos < text.length && /\s/.test(text[pos])) pos++;
-    
+
     setCursorPosition(element, pos);
     return true;
   };
@@ -174,15 +174,15 @@
     const cursor = getCursorPosition(element);
     const text = getText(element);
     let pos = cursor;
-    
+
     if (pos > 0) pos--;
-    
+
     // Skip over whitespace
     while (pos > 0 && /\s/.test(text[pos])) pos--;
-    
+
     // Skip over word characters (non-whitespace including punctuation)
     while (pos > 0 && !/\s/.test(text[pos - 1])) pos--;
-    
+
     setCursorPosition(element, pos);
     return true;
   };
@@ -191,20 +191,20 @@
 
   const deleteText = (element, startPos, endPos) => {
     console.log(`[Vim-Extension] deleteText called: startPos=${startPos}, endPos=${endPos}`);
-    
+
     if (element.tagName === "TEXTAREA" || element.tagName === "INPUT") {
       const text = element.value;
       console.log(`[Vim-Extension] Original text: "${text}"`);
-      
+
       // Focus and select the text to delete
       element.focus();
       element.setSelectionRange(startPos, endPos);
-      
+
       // Method 1: Try using insertText (most modern and compatible)
       if (typeof element.setRangeText === 'function') {
         console.log(`[Vim-Extension] Using setRangeText method`);
         element.setRangeText('', startPos, endPos, 'end');
-        
+
         // Fire input event manually
         const inputEvent = new InputEvent('input', {
           bubbles: true,
@@ -212,46 +212,46 @@
           inputType: 'deleteContentBackward'
         });
         element.dispatchEvent(inputEvent);
-        
+
       } else {
         // Method 2: Direct value manipulation with proper events
         console.log(`[Vim-Extension] Using direct value manipulation`);
         const newValue = text.slice(0, startPos) + text.slice(endPos);
-        
+
         // Create a property descriptor to bypass React's value tracking
-        const descriptor = Object.getOwnPropertyDescriptor(element, 'value') || 
-                          Object.getOwnPropertyDescriptor(Object.getPrototypeOf(element), 'value');
-        
+        const descriptor = Object.getOwnPropertyDescriptor(element, 'value') ||
+          Object.getOwnPropertyDescriptor(Object.getPrototypeOf(element), 'value');
+
         if (descriptor && descriptor.set) {
           descriptor.set.call(element, newValue);
         } else {
           element.value = newValue;
         }
-        
+
         // Fire comprehensive events
         element.dispatchEvent(new InputEvent('input', { bubbles: true, cancelable: true }));
         element.dispatchEvent(new Event('change', { bubbles: true, cancelable: true }));
       }
-      
+
       console.log(`[Vim-Extension] New text: "${element.value}"`);
       setCursorPosition(element, startPos);
-      
+
     } else if (element.isContentEditable) {
       const text = getText(element);
       console.log(`[Vim-Extension] Original contentEditable text: "${text}"`);
-      
-      // For contentEditable, use direct text replacement with events
+
+      // Simple and reliable approach for all contentEditable elements
       element.focus();
       const newText = text.slice(0, startPos) + text.slice(endPos);
       element.textContent = newText;
-      
+
       // Fire input events for contentEditable
       element.dispatchEvent(new InputEvent('input', {
         bubbles: true,
         cancelable: true,
         inputType: 'deleteContentBackward'
       }));
-      
+
       setCursorPosition(element, startPos);
     }
   };
@@ -260,12 +260,12 @@
     const cursor = getCursorPosition(element);
     const text = getText(element);
     let endPos = cursor;
-    
+
     console.log(`[Vim-Extension] deleteWord: cursor=${cursor}, text="${text}", char at cursor="${text[cursor]}"`);
-    
+
     // Find end of current word (non-whitespace characters including punctuation)
     while (endPos < text.length && !/\s/.test(text[endPos])) endPos++;
-    
+
     // If cursor is on whitespace, find the next word and delete it
     if (cursor < text.length && /\s/.test(text[cursor])) {
       console.log(`[Vim-Extension] Cursor on whitespace, finding next word`);
@@ -274,9 +274,9 @@
       // Find end of next word
       while (endPos < text.length && !/\s/.test(text[endPos])) endPos++;
     }
-    
+
     console.log(`[Vim-Extension] deleteWord: will delete from ${cursor} to ${endPos}, text to delete: "${text.slice(cursor, endPos)}"`);
-    
+
     if (endPos > cursor) {
       deleteText(element, cursor, endPos);
       return true;
@@ -293,7 +293,7 @@
   };
 
   // --- Future vim motions can be added here ---
-  
+
   // Example of additional motions you might want to add:
   /*
   const moveToLineStart = (element) => {
