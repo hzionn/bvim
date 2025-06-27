@@ -40,7 +40,7 @@ const injectVimScripts = async (tabId, url) => {
   try {
     await chrome.scripting.executeScript({
       target: { tabId },
-      files: ['shared-utils.js', 'vim-motions.js', 'vim-state-machine.js', 'content.js']
+      files: ['src/shared-utils.js', 'src/vim-motions.js', 'src/vim-state-machine.js', 'src/content.js']
     });
     console.log(`[Vim-Extension] Scripts injected successfully on: ${url}`);
   } catch (error) {

@@ -11,13 +11,13 @@
   "host_permissions": [
     "<all_urls>"
   ],
-  "options_page": "options/options.html",
+  "options_page": "src/options/options.html",
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "src/background.js"
   },
   "web_accessible_resources": [
     {
-      "resources": ["shared-utils.js"],
+      "resources": ["src/shared-utils.js"],
       "matches": ["<all_urls>"]
     }
   ],
