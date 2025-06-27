@@ -2,9 +2,7 @@
 
 **B**rowser **Vim** - A Chrome extension that brings basic, essential Vim keybindings to text fields on your favorite websites. Navigate and edit text with familiar Vim motions without leaving your browser.
 
-## Features
-
-### Current Vim Motions
+## Features (Current Vim Motions)
 
 **Mode Management:**
 
@@ -82,11 +80,26 @@ Access the options page to customize your experience:
 
 ## Installation
 
-1. Clone this repository or download the source code
-2. Open Chrome and navigate to `chrome://extensions/`
-3. Enable "Developer mode" in the top right
-4. Click "Load unpacked" and select the extension directory
-5. The extension will appear in your browser toolbar
+Since Bvim is not yet published on the Chrome Web Store, you'll need to install it manually as an unpacked extension:
+
+1. **Download the extension**
+   - Clone this repository: `git clone https://github.com/hzionn/bvim.git`
+   - Or download the ZIP file and extract it to a folder
+
+2. **Open Chrome Extensions page**
+   - Navigate to `chrome://extensions/` in your browser
+   - Or go to Chrome menu → More tools → Extensions
+
+3. **Enable Developer mode**
+   - Toggle the "Developer mode" switch in the top-right corner of the extensions page
+
+4. **Load the extension**
+   - Click the "Load unpacked" button that appears
+   - Select the `bvim` folder (the root directory containing `manifest.json`)
+
+5. **Verify installation**
+   - The Bvim extension should now appear in your extensions list
+   - You'll see the extension icon in your browser toolbar
 
 ## Usage
 
@@ -97,18 +110,5 @@ Access the options page to customize your experience:
 5. Press `i` to return to Insert mode for regular typing
 
 The mode indicator in the bottom-right corner shows your current mode and will change colors if you have colored indicators enabled. When typing commands like `dw` or `cw`, the indicator will show DELETE or CHANGE modes respectively.
-
-## Development
-
-This extension uses:
-
-- **Manifest V3** for modern Chrome extension standards
-- **Content scripts** for seamless integration with web pages
-- **Chrome Storage API** for synchronized settings across devices
-- **Universal compatibility** with standard HTML form elements and contentEditable areas
-- **Finite State Machine** for robust mode management and command processing
-- **Event-driven architecture** for responsive text editing and React compatibility
-
----
 
 > ⭐ **If Bvim helps improve your browsing experience, please consider starring this repository!** Your support helps others discover this project and motivates continued development.
