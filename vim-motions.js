@@ -187,6 +187,111 @@
     return true;
   };
 
+  // --- Text Modification Functions ---
+
+  const deleteText = (element, startPos, endPos) => {
+    console.log(`[Vim-Extension] deleteText called: startPos=${startPos}, endPos=${endPos}`);
+    
+    if (element.tagName === "TEXTAREA" || element.tagName === "INPUT") {
+      const text = element.value;
+      console.log(`[Vim-Extension] Original text: "${text}"`);
+      
+      // Focus and select the text to delete
+      element.focus();
+      element.setSelectionRange(startPos, endPos);
+      
+      // Method 1: Try using insertText (most modern and compatible)
+      if (typeof element.setRangeText === 'function') {
+        console.log(`[Vim-Extension] Using setRangeText method`);
+        element.setRangeText('', startPos, endPos, 'end');
+        
+        // Fire input event manually
+        const inputEvent = new InputEvent('input', {
+          bubbles: true,
+          cancelable: true,
+          inputType: 'deleteContentBackward'
+        });
+        element.dispatchEvent(inputEvent);
+        
+      } else {
+        // Method 2: Direct value manipulation with proper events
+        console.log(`[Vim-Extension] Using direct value manipulation`);
+        const newValue = text.slice(0, startPos) + text.slice(endPos);
+        
+        // Create a property descriptor to bypass React's value tracking
+        const descriptor = Object.getOwnPropertyDescriptor(element, 'value') || 
+                          Object.getOwnPropertyDescriptor(Object.getPrototypeOf(element), 'value');
+        
+        if (descriptor && descriptor.set) {
+          descriptor.set.call(element, newValue);
+        } else {
+          element.value = newValue;
+        }
+        
+        // Fire comprehensive events
+        element.dispatchEvent(new InputEvent('input', { bubbles: true, cancelable: true }));
+        element.dispatchEvent(new Event('change', { bubbles: true, cancelable: true }));
+      }
+      
+      console.log(`[Vim-Extension] New text: "${element.value}"`);
+      setCursorPosition(element, startPos);
+      
+    } else if (element.isContentEditable) {
+      const text = getText(element);
+      console.log(`[Vim-Extension] Original contentEditable text: "${text}"`);
+      
+      // For contentEditable, use direct text replacement with events
+      element.focus();
+      const newText = text.slice(0, startPos) + text.slice(endPos);
+      element.textContent = newText;
+      
+      // Fire input events for contentEditable
+      element.dispatchEvent(new InputEvent('input', {
+        bubbles: true,
+        cancelable: true,
+        inputType: 'deleteContentBackward'
+      }));
+      
+      setCursorPosition(element, startPos);
+    }
+  };
+
+  const deleteWord = (element) => {
+    const cursor = getCursorPosition(element);
+    const text = getText(element);
+    let endPos = cursor;
+    
+    console.log(`[Vim-Extension] deleteWord: cursor=${cursor}, text="${text}", char at cursor="${text[cursor]}"`);
+    
+    // Find end of current word (non-whitespace characters including punctuation)
+    while (endPos < text.length && !/\s/.test(text[endPos])) endPos++;
+    
+    // If cursor is on whitespace, find the next word and delete it
+    if (cursor < text.length && /\s/.test(text[cursor])) {
+      console.log(`[Vim-Extension] Cursor on whitespace, finding next word`);
+      // Skip whitespace to find start of next word
+      while (endPos < text.length && /\s/.test(text[endPos])) endPos++;
+      // Find end of next word
+      while (endPos < text.length && !/\s/.test(text[endPos])) endPos++;
+    }
+    
+    console.log(`[Vim-Extension] deleteWord: will delete from ${cursor} to ${endPos}, text to delete: "${text.slice(cursor, endPos)}"`);
+    
+    if (endPos > cursor) {
+      deleteText(element, cursor, endPos);
+      return true;
+    }
+    console.log(`[Vim-Extension] deleteWord: nothing to delete`);
+    return false;
+  };
+
+  const changeWord = (element) => {
+    // Delete the word first
+    const deleted = deleteWord(element);
+    // Return whether we deleted something (content.js will handle mode switch)
+    return deleted;
+  };
+
   // --- Future vim motions can be added here ---
   
   // Example of additional motions you might want to add:
@@ -220,7 +325,10 @@
     moveUp,
     moveDown,
     moveWordForward,
-    moveWordBackward
+    moveWordBackward,
+    deleteText,
+    deleteWord,
+    changeWord
   };
 
   console.log("[Vim-Extension] VimMotions loaded and ready");

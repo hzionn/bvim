@@ -1,9 +1,39 @@
 console.log("[Vim-Extension] Content script loaded.");
 
+// Add CSS for cursor color changes
+const addCursorStyles = () => {
+  if (document.getElementById('vim-cursor-styles')) return; // Already added
+  
+  const style = document.createElement('style');
+  style.id = 'vim-cursor-styles';
+  style.textContent = `
+    .vim-normal-mode {
+      caret-color: #dc3545 !important; /* Red cursor for normal mode */
+    }
+    .vim-insert-mode {
+      caret-color: #28a745 !important; /* Green cursor for insert mode */
+    }
+    /* Fallback for older browsers */
+    .vim-normal-mode:focus {
+      caret-color: #dc3545 !important;
+    }
+    .vim-insert-mode:focus {
+      caret-color: #28a745 !important;
+    }
+  `;
+  document.head.appendChild(style);
+  console.log("[Vim-Extension] Cursor color styles added");
+};
+
+// Apply cursor color styles immediately
+addCursorStyles();
+
 let sites = [];
 let enabled = true;
 let coloredIndicator = true;
+let coloredCursor = true;
 let mode = "insert"; // 'insert' or 'normal'
+let pendingCommand = null; // For multi-key sequences like 'dw', 'cw'
 
 let currentSiteMatch = false;
 
@@ -58,7 +88,7 @@ const defaultSites = [
 ];
 
 const updateState = () => {
-  chrome.storage.sync.get(["sites", "enabled", "coloredIndicator"], (data) => {
+  chrome.storage.sync.get(["sites", "enabled", "coloredIndicator", "coloredCursor"], (data) => {
     // If no sites exist, initialize with defaults
     if (!data.sites || data.sites.length === 0) {
       sites = [...defaultSites];
@@ -70,8 +100,9 @@ const updateState = () => {
 
     enabled = data.enabled !== undefined ? data.enabled : true;
     coloredIndicator = data.coloredIndicator !== undefined ? data.coloredIndicator : true;
+    coloredCursor = data.coloredCursor !== undefined ? data.coloredCursor : true;
     console.log(
-      `[Vim-Extension] State updated: Enabled=${enabled}, ColoredIndicator=${coloredIndicator}, Sites=${JSON.stringify(sites)}`,
+      `[Vim-Extension] State updated: Enabled=${enabled}, ColoredIndicator=${coloredIndicator}, ColoredCursor=${coloredCursor}, Sites=${JSON.stringify(sites)}`,
     );
     updateIndicator();
   });
@@ -103,15 +134,44 @@ const {
   moveUp,
   moveDown,
   moveWordForward,
-  moveWordBackward
+  moveWordBackward,
+  deleteText,
+  deleteWord,
+  changeWord
 } = window.VimMotions;
 
 // --- Core Logic ---
+
+// Cursor color management
+const updateCursorColor = (element) => {
+  if (!element || !isEditable(element)) return;
+  
+  // Remove all vim mode classes
+  element.classList.remove('vim-normal-mode', 'vim-insert-mode');
+  
+  // Only apply cursor colors if the feature is enabled
+  if (coloredCursor) {
+    // Add appropriate class based on current mode
+    if (mode === "normal") {
+      element.classList.add('vim-normal-mode');
+      console.log("[Vim-Extension] Applied red cursor for normal mode");
+    } else if (mode === "insert") {
+      element.classList.add('vim-insert-mode');
+      console.log("[Vim-Extension] Applied green cursor for insert mode");
+    }
+  } else {
+    console.log("[Vim-Extension] Cursor coloring disabled, not applying colors");
+  }
+};
 
 const setMode = (newMode) => {
   mode = newMode;
   console.log(`[Vim-Extension] Mode changed to: ${newMode}`);
   updateIndicator();
+  
+  // Update cursor color for the currently active element
+  const activeElement = document.activeElement;
+  updateCursorColor(activeElement);
 };
 
 
@@ -121,6 +181,20 @@ const escapeRegex = (str) =>
 
 const siteToRegex = (site) =>
   new RegExp("^" + escapeRegex(site).replace(/\\\*/g, ".*") + "$");
+
+// Add focus event listener to update cursor color when clicking into text fields
+document.addEventListener("focusin", (event) => {
+  if (isEditable(event.target) && enabled) {
+    // Check if current site is in the enabled sites list
+    const currentUrl = window.location.href;
+    const siteMatch = sites.some((site) => currentUrl.match(siteToRegex(site)));
+    
+    if (siteMatch) {
+      updateCursorColor(event.target);
+      console.log("[Vim-Extension] Focus event - updated cursor color");
+    }
+  }
+});
 
 document.addEventListener(
   "keydown",
@@ -181,10 +255,14 @@ document.addEventListener(
       return;
     }
 
+    // Update cursor color for the current element
+    updateCursorColor(activeElement);
+
     if (event.key === "Escape") {
       event.preventDefault();
       event.stopPropagation();
       event.stopImmediatePropagation();
+      pendingCommand = null; // Clear any pending command
       setMode("normal");
       return;
     }
@@ -194,9 +272,32 @@ document.addEventListener(
       event.stopPropagation();
       event.stopImmediatePropagation();
       const key = event.key.toLowerCase();
-      console.log(`[Vim-Extension] Normal mode command: ${key}`);
-      const cursor = getCursorPosition(activeElement);
-      const text = getText(activeElement);
+      console.log(`[Vim-Extension] Normal mode command: ${key}, pending: ${pendingCommand}`);
+      
+      // Handle multi-key sequences
+      if (pendingCommand) {
+        if (key === "w") {
+          switch (pendingCommand) {
+            case "d":
+              console.log("[Vim-Extension] Executing dw (delete word)");
+              deleteWord(activeElement);
+              break;
+            case "c":
+              console.log("[Vim-Extension] Executing cw (change word)");
+              if (changeWord(activeElement)) {
+                setMode("insert");
+              }
+              break;
+          }
+        } else {
+          console.log(`[Vim-Extension] Invalid motion '${key}' after '${pendingCommand}', canceling command`);
+        }
+        // Clear pending command after processing (success or failure)
+        pendingCommand = null;
+        return;
+      }
+      
+      // Handle single key commands and command initiators
       switch (key) {
         case "i":
           setMode("insert");
@@ -222,6 +323,21 @@ document.addEventListener(
           break;
         case "b":
           moveWordBackward(activeElement);
+          break;
+        case "d":
+          pendingCommand = "d";
+          console.log("[Vim-Extension] Waiting for motion after 'd'");
+          break;
+        case "c":
+          pendingCommand = "c";
+          console.log("[Vim-Extension] Waiting for motion after 'c'");
+          break;
+        default:
+          // Clear any pending command on unrecognized key
+          if (pendingCommand) {
+            console.log(`[Vim-Extension] Clearing pending command '${pendingCommand}' due to unrecognized key '${key}'`);
+            pendingCommand = null;
+          }
           break;
       }
     }
