@@ -17,8 +17,12 @@
   },
   "web_accessible_resources": [
     {
-      "resources": ["src/shared-utils.js"],
-      "matches": ["<all_urls>"]
+      "resources": [
+        "src/shared-utils.js"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
     }
   ],
   "icons": {

@@ -10,25 +10,25 @@ const { DEFAULT_SITES, siteToRegex, urlMatchesSites } = globalThis.VimSharedUtil
 const isUrlEnabled = async (url) => {
   try {
     const { sites = [], enabled = true } = await chrome.storage.sync.get(['sites', 'enabled']);
-    
+
     // If extension is globally disabled, return false
     if (!enabled) {
       console.log('[Vim-Extension] Extension globally disabled');
       return false;
     }
-    
+
     // If no sites configured, initialize with defaults
     if (sites.length === 0) {
       await chrome.storage.sync.set({ sites: DEFAULT_SITES });
       console.log('[Vim-Extension] Initialized with default sites');
       return urlMatchesSites(url, DEFAULT_SITES);
     }
-    
+
     // Check if URL matches any enabled site
     const matches = urlMatchesSites(url, sites);
     console.log(`[Vim-Extension] URL ${url} enabled: ${matches}`);
     return matches;
-    
+
   } catch (error) {
     console.error('[Vim-Extension] Error checking URL enabled status:', error);
     return false;
@@ -54,7 +54,7 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
   // Only act when page is completely loaded and has a valid URL
   if (changeInfo.status === 'complete' && tab.url && !tab.url.startsWith('chrome://')) {
     const enabled = await isUrlEnabled(tab.url);
-    
+
     if (enabled) {
       await injectVimScripts(tabId, tab.url);
     } else {
@@ -69,7 +69,7 @@ chrome.tabs.onActivated.addListener(async (activeInfo) => {
     const tab = await chrome.tabs.get(activeInfo.tabId);
     if (tab.url && !tab.url.startsWith('chrome://')) {
       const enabled = await isUrlEnabled(tab.url);
-      
+
       if (enabled) {
         // Check if scripts are already injected by trying to access a known global
         try {
@@ -77,7 +77,7 @@ chrome.tabs.onActivated.addListener(async (activeInfo) => {
             target: { tabId: activeInfo.tabId },
             func: () => typeof window.VimStateMachine !== 'undefined'
           });
-          
+
           // If scripts not already injected, inject them
           if (results && results[0] && !results[0].result) {
             await injectVimScripts(activeInfo.tabId, tab.url);
@@ -97,14 +97,14 @@ chrome.tabs.onActivated.addListener(async (activeInfo) => {
 chrome.storage.onChanged.addListener(async (changes, namespace) => {
   if (namespace === 'sync' && (changes.sites || changes.enabled)) {
     console.log('[Vim-Extension] Sites or enabled status changed, re-evaluating active tabs');
-    
+
     // Get all active tabs and re-evaluate them
     try {
       const tabs = await chrome.tabs.query({});
       for (const tab of tabs) {
         if (tab.url && !tab.url.startsWith('chrome://')) {
           const enabled = await isUrlEnabled(tab.url);
-          
+
           if (enabled) {
             // Try to inject if not already present
             try {
@@ -112,7 +112,7 @@ chrome.storage.onChanged.addListener(async (changes, namespace) => {
                 target: { tabId: tab.id },
                 func: () => typeof window.VimStateMachine !== 'undefined'
               });
-              
+
               if (results && results[0] && !results[0].result) {
                 await injectVimScripts(tab.id, tab.url);
               }
@@ -135,7 +135,7 @@ chrome.runtime.onStartup.addListener(() => {
 
 chrome.runtime.onInstalled.addListener(async (details) => {
   console.log('[Vim-Extension] Extension installed/updated:', details.reason);
-  
+
   // Initialize default settings on first install
   if (details.reason === 'install') {
     await chrome.storage.sync.set({

@@ -1,6 +1,6 @@
 // shared-utils.js - Shared utilities between background and content scripts
 
-(function() {
+(function () {
   'use strict';
 
   // Default sites that will be pre-added on first install
@@ -30,7 +30,7 @@
   // Export to global scope for use in both background and content scripts
   // Check if we're in a service worker (no window object) or content script
   const exportTarget = typeof window !== 'undefined' ? window : globalThis;
-  
+
   exportTarget.VimSharedUtils = {
     DEFAULT_SITES,
     escapeRegex,

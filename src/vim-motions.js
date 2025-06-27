@@ -298,7 +298,7 @@
     } else {
       // Find end of current word (non-whitespace characters including punctuation)
       while (endPos < text.length && !/\s/.test(text[endPos])) endPos++;
-      
+
       // For 'dw', also include trailing whitespace
       while (endPos < text.length && /\s/.test(text[endPos])) endPos++;
     }
