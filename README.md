@@ -64,31 +64,8 @@ Access the options page to customize your experience:
 
 ## Planned Features
 
-**Line Movement:**
-
-- [ ] `0` - Jump to beginning of line
-- [ ] `$` - Jump to end of line
-- [ ] `^` - Jump to first non-whitespace character
-
-**Advanced Word Movement:**
-
-- [ ] `e` - Jump to end of current/next word
-- [ ] `ge` - Jump to end of previous word
-- [ ] `W`, `B`, `E` - WORD movement (space-separated)
-
-**Text Objects & Selection:**
-
-- [ ] Visual mode (`v`, `V`, `Ctrl+v`)
-- [ ] Word text objects (`aw`, `iw`)
-- [ ] Paragraph text objects (`ap`, `ip`)
-- [ ] Quote text objects (`a"`, `i"`, `a'`, `i'`)
-
 **Editing Commands:**
 
-- [ ] `dd` - Delete line
-- [ ] `d$` - Delete to end of line
-- [ ] `u` - Undo
-- [ ] `Ctrl+r` - Redo
 - [ ] `x` - Delete character under cursor
 - [ ] `r` - Replace single character
 
@@ -100,20 +77,6 @@ Access the options page to customize your experience:
 - [ ] `N` - Previous search result
 - [ ] `gg` - Go to first line
 - [ ] `G` - Go to last line
-
-**Copy & Paste:**
-
-- [ ] `yy` - Yank (copy) line
-- [ ] `yw` - Yank word
-- [ ] `p` - Paste after cursor
-- [ ] `P` - Paste before cursor
-
-**Advanced Features:**
-
-- [ ] Multiple cursor support
-- [ ] Macro recording (`q`, `@`)
-- [ ] Registers for copy/paste
-- [ ] Dot (`.`) command repetition
 
 ## Installation
 
