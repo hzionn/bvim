@@ -23,12 +23,23 @@ A Chrome extension that brings essential Vim keybindings to text fields on your 
 - `w` - Jump forward to the start of the next word
 - `b` - Jump backward to the start of the previous word
 
+**Editing Commands:**
+
+- `dw` - Delete word (including trailing whitespace)
+- `cw` - Change word (delete word without trailing whitespace and enter Insert mode)
+
+**Visual Features:**
+
+- **Mode indicator** - Shows current mode (NORMAL/INSERT/DELETE/CHANGE) in bottom-right corner
+- **Cursor color changes** - Red cursor for Normal mode, green cursor for Insert mode (optional)
+- **Colored mode indicator** - Red background for Normal mode, green for Insert mode (optional)
+
 **Universal Features:**
 
 - **Arrow key navigation** - Works on ALL websites (even when vim keybindings are disabled)
 - **Smart element detection** - Automatically works with textareas, input fields, and contentEditable elements
-- **Visual mode indicator** - Shows current mode (NORMAL/INSERT) with optional color coding
 - **Site-specific control** - Enable/disable vim keybindings per website
+- **FSM-based state management** - Robust finite state machine handles mode transitions and command sequences
 
 **Language Support:**
 
@@ -42,6 +53,7 @@ Access the options page to customize your experience:
 - **Toggle Extension** - Quickly enable/disable the extension
 - **Manage Websites** - Add/remove sites where vim keybindings should be active
 - **Mode Indicator Colors** - Choose between colored indicators (red for Normal, green for Insert) or classic black
+- **Cursor Colors** - Enable/disable cursor color changes for mode indication
 
 ### Default Enabled Sites
 
@@ -54,46 +66,54 @@ Access the options page to customize your experience:
 
 **Line Movement:**
 
-- `0` - Jump to beginning of line
-- `$` - Jump to end of line
-- `^` - Jump to first non-whitespace character
+- [ ] `0` - Jump to beginning of line
+- [ ] `$` - Jump to end of line
+- [ ] `^` - Jump to first non-whitespace character
 
 **Advanced Word Movement:**
 
-- `e` - Jump to end of current/next word
-- `ge` - Jump to end of previous word
-- `W`, `B`, `E` - WORD movement (space-separated)
+- [ ] `e` - Jump to end of current/next word
+- [ ] `ge` - Jump to end of previous word
+- [ ] `W`, `B`, `E` - WORD movement (space-separated)
 
 **Text Objects & Selection:**
 
-- Visual mode (`v`, `V`, `Ctrl+v`)
-- Word text objects (`aw`, `iw`)
-- Paragraph text objects (`ap`, `ip`)
-- Quote text objects (`a"`, `i"`, `a'`, `i'`)
+- [ ] Visual mode (`v`, `V`, `Ctrl+v`)
+- [ ] Word text objects (`aw`, `iw`)
+- [ ] Paragraph text objects (`ap`, `ip`)
+- [ ] Quote text objects (`a"`, `i"`, `a'`, `i'`)
 
 **Editing Commands:**
 
-- `dd` - Delete line
-- `dw` - Delete word
-- `d$` - Delete to end of line
-- `u` - Undo
-- `Ctrl+r` - Redo
+- [ ] `dd` - Delete line
+- [ ] `d$` - Delete to end of line
+- [ ] `u` - Undo
+- [ ] `Ctrl+r` - Redo
+- [ ] `x` - Delete character under cursor
+- [ ] `r` - Replace single character
 
 **Search & Navigation:**
 
-- `/` - Search forward
-- `?` - Search backward
-- `n` - Next search result
-- `N` - Previous search result
-- `gg` - Go to first line
-- `G` - Go to last line
+- [ ] `/` - Search forward
+- [ ] `?` - Search backward
+- [ ] `n` - Next search result
+- [ ] `N` - Previous search result
+- [ ] `gg` - Go to first line
+- [ ] `G` - Go to last line
 
 **Copy & Paste:**
 
-- `yy` - Yank (copy) line
-- `yw` - Yank word
-- `p` - Paste after cursor
-- `P` - Paste before cursor
+- [ ] `yy` - Yank (copy) line
+- [ ] `yw` - Yank word
+- [ ] `p` - Paste after cursor
+- [ ] `P` - Paste before cursor
+
+**Advanced Features:**
+
+- [ ] Multiple cursor support
+- [ ] Macro recording (`q`, `@`)
+- [ ] Registers for copy/paste
+- [ ] Dot (`.`) command repetition
 
 ## Installation
 
@@ -111,7 +131,7 @@ Access the options page to customize your experience:
 4. Use vim keybindings to navigate and edit
 5. Press `i` to return to Insert mode for regular typing
 
-The mode indicator in the bottom-right corner shows your current mode and will change colors if you have colored indicators enabled.
+The mode indicator in the bottom-right corner shows your current mode and will change colors if you have colored indicators enabled. When typing commands like `dw` or `cw`, the indicator will show DELETE or CHANGE modes respectively.
 
 ## Development
 
@@ -121,6 +141,8 @@ This extension uses:
 - **Content scripts** for seamless integration with web pages
 - **Chrome Storage API** for synchronized settings across devices
 - **Universal compatibility** with standard HTML form elements and contentEditable areas
+- **Finite State Machine** for robust mode management and command processing
+- **Event-driven architecture** for responsive text editing and React compatibility
 
 ## License
 
