@@ -4,6 +4,21 @@
 (function () {
   'use strict';
 
+  // --- Word boundary utilities ---
+  
+  // Vim-like character classification
+  const isWordChar = (char) => /[a-zA-Z0-9_]/.test(char);
+  const isPunctuation = (char) => /[^a-zA-Z0-9_\s]/.test(char);
+  const isWhitespace = (char) => /\s/.test(char);
+  
+  // Get character type for vim word motions
+  const getCharType = (char) => {
+    if (isWhitespace(char)) return 'whitespace';
+    if (isWordChar(char)) return 'word';
+    if (isPunctuation(char)) return 'punctuation';
+    return 'other';
+  };
+
   // --- Element & Cursor Abstraction ---
 
   const isEditable = (element) => {
@@ -21,18 +36,35 @@
     if (element.tagName === "TEXTAREA" || element.tagName === "INPUT")
       return element.value;
     if (element.isContentEditable) {
-      // For contentEditable, we need to preserve line breaks
+      // For contentEditable, we need to preserve line breaks and handle complex DOM structures
       // Clone the element to avoid modifying the original
       const clone = element.cloneNode(true);
-      // Replace <br> tags with newlines
+      
+      // Handle various line break patterns
       clone.querySelectorAll('br').forEach(br => br.replaceWith('\n'));
-      // Replace block elements (div, p) with newlines  
-      clone.querySelectorAll('div, p').forEach(block => {
-        if (block.nextSibling) {
+      
+      // Handle block elements - add newlines appropriately
+      clone.querySelectorAll('div, p, li, h1, h2, h3, h4, h5, h6').forEach(block => {
+        // Only add newline if this block has a next sibling or isn't the last element
+        if (block.nextSibling || block.parentNode.lastChild !== block) {
           block.after('\n');
         }
       });
-      return clone.textContent || clone.innerText || '';
+      
+      // Handle list elements
+      clone.querySelectorAll('ul, ol').forEach(list => {
+        if (list.nextSibling) {
+          list.after('\n');
+        }
+      });
+      
+      // Get text content, fallback to innerText for better compatibility
+      let text = clone.textContent || clone.innerText || '';
+      
+      // Normalize multiple consecutive newlines to single newlines (but preserve intentional spacing)
+      text = text.replace(/\n{3,}/g, '\n\n');
+      
+      return text;
     }
     return "";
   };
@@ -160,11 +192,24 @@
     const text = getText(element);
     let pos = cursor;
 
-    // Skip over current word (non-whitespace characters including punctuation)
-    while (pos < text.length && !/\s/.test(text[pos])) pos++;
+    if (pos >= text.length) return false;
 
-    // Skip over whitespace to get to the next word
-    while (pos < text.length && /\s/.test(text[pos])) pos++;
+    const currentCharType = getCharType(text[pos]);
+
+    // Skip over current group (word, punctuation, or whitespace)
+    if (currentCharType === 'word') {
+      // Skip word characters
+      while (pos < text.length && isWordChar(text[pos])) pos++;
+    } else if (currentCharType === 'punctuation') {
+      // Skip punctuation characters
+      while (pos < text.length && isPunctuation(text[pos])) pos++;
+    } else if (currentCharType === 'whitespace') {
+      // Skip whitespace
+      while (pos < text.length && isWhitespace(text[pos])) pos++;
+    }
+
+    // Skip any additional whitespace to get to the start of the next word/punctuation
+    while (pos < text.length && isWhitespace(text[pos])) pos++;
 
     setCursorPosition(element, pos);
     return true;
@@ -175,13 +220,28 @@
     const text = getText(element);
     let pos = cursor;
 
-    if (pos > 0) pos--;
+    if (pos <= 0) return false;
 
-    // Skip over whitespace
-    while (pos > 0 && /\s/.test(text[pos])) pos--;
+    pos--; // Move back one character to start
 
-    // Skip over word characters (non-whitespace including punctuation)
-    while (pos > 0 && !/\s/.test(text[pos - 1])) pos--;
+    // Skip over whitespace first
+    while (pos > 0 && isWhitespace(text[pos])) pos--;
+
+    if (pos <= 0) {
+      setCursorPosition(element, 0);
+      return true;
+    }
+
+    const targetCharType = getCharType(text[pos]);
+
+    // Move to the beginning of the current group
+    if (targetCharType === 'word') {
+      // Skip back to start of word
+      while (pos > 0 && isWordChar(text[pos - 1])) pos--;
+    } else if (targetCharType === 'punctuation') {
+      // Skip back to start of punctuation group
+      while (pos > 0 && isPunctuation(text[pos - 1])) pos--;
+    }
 
     setCursorPosition(element, pos);
     return true;
@@ -288,20 +348,36 @@
 
     console.log(`[Vim-Extension] deleteWord (dw): cursor=${cursor}, text="${text}", char at cursor="${text[cursor]}"`);
 
-    // If cursor is on whitespace, find the next word and delete it
-    if (cursor < text.length && /\s/.test(text[cursor])) {
-      console.log(`[Vim-Extension] Cursor on whitespace, finding next word`);
-      // Skip whitespace to find start of next word
-      while (endPos < text.length && /\s/.test(text[endPos])) endPos++;
-      // Find end of next word
-      while (endPos < text.length && !/\s/.test(text[endPos])) endPos++;
-    } else {
-      // Find end of current word (non-whitespace characters including punctuation)
-      while (endPos < text.length && !/\s/.test(text[endPos])) endPos++;
-
-      // For 'dw', also include trailing whitespace
-      while (endPos < text.length && /\s/.test(text[endPos])) endPos++;
+    if (cursor >= text.length) {
+      console.log(`[Vim-Extension] deleteWord (dw): cursor at end, nothing to delete`);
+      return false;
     }
+
+    const currentCharType = getCharType(text[cursor]);
+
+    // Delete current group and trailing whitespace
+    if (currentCharType === 'word') {
+      // Delete word characters
+      while (endPos < text.length && isWordChar(text[endPos])) endPos++;
+    } else if (currentCharType === 'punctuation') {
+      // Delete punctuation characters
+      while (endPos < text.length && isPunctuation(text[endPos])) endPos++;
+    } else if (currentCharType === 'whitespace') {
+      // If on whitespace, skip to next word/punctuation and delete that
+      while (endPos < text.length && isWhitespace(text[endPos])) endPos++;
+      
+      if (endPos < text.length) {
+        const nextCharType = getCharType(text[endPos]);
+        if (nextCharType === 'word') {
+          while (endPos < text.length && isWordChar(text[endPos])) endPos++;
+        } else if (nextCharType === 'punctuation') {
+          while (endPos < text.length && isPunctuation(text[endPos])) endPos++;
+        }
+      }
+    }
+
+    // For 'dw', also include trailing whitespace
+    while (endPos < text.length && isWhitespace(text[endPos])) endPos++;
 
     console.log(`[Vim-Extension] deleteWord (dw): will delete from ${cursor} to ${endPos}, text to delete: "${text.slice(cursor, endPos)}"`);
 
@@ -324,17 +400,32 @@
 
     console.log(`[Vim-Extension] changeWord (cw): cursor=${cursor}, text="${text}", char at cursor="${text[cursor]}"`);
 
-    // If cursor is on whitespace, find the next word and delete it (without trailing space)
-    if (cursor < text.length && /\s/.test(text[cursor])) {
-      console.log(`[Vim-Extension] Cursor on whitespace, finding next word`);
-      // Skip whitespace to find start of next word
-      while (endPos < text.length && /\s/.test(text[endPos])) endPos++;
-      // Find end of next word
-      while (endPos < text.length && !/\s/.test(text[endPos])) endPos++;
-    } else {
-      // Find end of current word (non-whitespace characters including punctuation)
-      // For 'cw', do NOT include trailing whitespace
-      while (endPos < text.length && !/\s/.test(text[endPos])) endPos++;
+    if (cursor >= text.length) {
+      console.log(`[Vim-Extension] changeWord (cw): cursor at end, nothing to change`);
+      return false;
+    }
+
+    const currentCharType = getCharType(text[cursor]);
+
+    // Delete current group (but NOT trailing whitespace for cw)
+    if (currentCharType === 'word') {
+      // Delete word characters only
+      while (endPos < text.length && isWordChar(text[endPos])) endPos++;
+    } else if (currentCharType === 'punctuation') {
+      // Delete punctuation characters only
+      while (endPos < text.length && isPunctuation(text[endPos])) endPos++;
+    } else if (currentCharType === 'whitespace') {
+      // If on whitespace, skip to next word/punctuation and delete that (no trailing space)
+      while (endPos < text.length && isWhitespace(text[endPos])) endPos++;
+      
+      if (endPos < text.length) {
+        const nextCharType = getCharType(text[endPos]);
+        if (nextCharType === 'word') {
+          while (endPos < text.length && isWordChar(text[endPos])) endPos++;
+        } else if (nextCharType === 'punctuation') {
+          while (endPos < text.length && isPunctuation(text[endPos])) endPos++;
+        }
+      }
     }
 
     console.log(`[Vim-Extension] changeWord (cw): will delete from ${cursor} to ${endPos}, text to delete: "${text.slice(cursor, endPos)}"`);

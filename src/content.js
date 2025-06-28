@@ -303,22 +303,17 @@
       const key = event.key === "Escape" ? "Escape" : event.key.toLowerCase();
       const result = vimFSM.processInput(key, activeElement);
 
-      // const shouldPrevent = vimFSM.isNormalMode() || vimFSM.isPendingCommand() || result.stateChanged || result.action;
-      // if (shouldPrevent) {
-      //   event.preventDefault();
-      //   event.stopPropagation();
-      //   event.stopImmediatePropagation();
-      // }
-
+      // In normal mode, prevent all keys except special system keys
+      // In other modes, only prevent if FSM handled the input
       if (vimFSM.isNormalMode() || vimFSM.isPendingCommand()) {
-        const allowedKeys = ['tab', 'enter', 'f5', 'f12'];
+        const allowedKeys = ['tab', 'enter', 'f5', 'f12', 'f1', 'f2', 'f3', 'f4', 'f6', 'f7', 'f8', 'f9', 'f10', 'f11'];
         if (!allowedKeys.includes(key)) {
           event.preventDefault();
           event.stopPropagation();
           event.stopImmediatePropagation();
         }
       } else if (result.stateChanged || result.action) {
-      // If FSM handled the input, prevent default behavior
+        // If FSM handled the input, prevent default behavior
         event.preventDefault();
         event.stopPropagation();
         event.stopImmediatePropagation();
