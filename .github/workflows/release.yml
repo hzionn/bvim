@@ -9,6 +9,8 @@ on:
 jobs:
   release:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write  # Required for creating releases and tags
     
     steps:
     - name: Checkout code
@@ -86,7 +88,7 @@ jobs:
     
     - name: Create GitHub Release
       if: steps.check_tag.outputs.exists == 'false'
-      uses: softprops/action-gh-release@v1
+      uses: softprops/action-gh-release@v2
       with:
         tag_name: ${{ steps.get_version.outputs.tag }}
         name: "Bvim ${{ steps.get_version.outputs.tag }}"
