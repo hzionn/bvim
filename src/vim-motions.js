@@ -247,6 +247,32 @@
     return true;
   };
 
+  const moveWordEnd = (element) => {
+    let pos = getCursorPosition(element);
+    const text = getText(element);
+
+    if (pos >= text.length) return false;
+
+    // Skip initial whitespace to mimic Vim's 'e'
+    while (pos < text.length && isWhitespace(text[pos])) pos++;
+
+    if (pos >= text.length) {
+      setCursorPosition(element, text.length);
+      return true;
+    }
+
+    const targetType = getCharType(text[pos]);
+
+    if (targetType === 'word') {
+      while (pos < text.length - 1 && isWordChar(text[pos + 1])) pos++;
+    } else if (targetType === 'punctuation') {
+      while (pos < text.length - 1 && isPunctuation(text[pos + 1])) pos++;
+    }
+
+    setCursorPosition(element, pos);
+    return true;
+  };
+
   // --- Text Modification Functions ---
 
   /**
@@ -472,6 +498,7 @@
     moveDown,
     moveWordForward,
     moveWordBackward,
+    moveWordEnd,
     deleteText,
     deleteWord,
     changeWord

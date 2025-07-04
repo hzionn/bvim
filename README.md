@@ -20,6 +20,7 @@
 
 - `w` - Jump forward to the start of the next word
 - `b` - Jump backward to the start of the previous word
+- `e` - Jump to the end of the current word
 
 **Editing Commands:**
 
