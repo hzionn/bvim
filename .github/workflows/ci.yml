@@ -1,0 +1,23 @@
+name: CI Checks
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Validate manifest.json
+      run: node -e "JSON.parse(require('fs').readFileSync('manifest.json', 'utf8'))"
+
+    - name: Syntax check JavaScript
+      run: |
+        rg --files -g '*.js' src | while read -r file; do
+          node --check "$file"
+        done
