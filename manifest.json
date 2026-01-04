@@ -9,7 +9,10 @@
     "scripting"
   ],
   "host_permissions": [
-    "<all_urls>"
+    "https://github.com/*",
+    "https://chatgpt.com/*",
+    "https://gemini.google.com/*",
+    "https://www.notion.so/*"
   ],
   "options_page": "src/options/options.html",
   "background": {
@@ -21,7 +24,10 @@
         "src/shared-utils.js"
       ],
       "matches": [
-        "<all_urls>"
+        "https://github.com/*",
+        "https://chatgpt.com/*",
+        "https://gemini.google.com/*",
+        "https://www.notion.so/*"
       ]
     }
   ],

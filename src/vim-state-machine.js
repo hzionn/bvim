@@ -3,6 +3,9 @@
 (function () {
   'use strict';
 
+  const sharedUtils = window.VimSharedUtils || {};
+  const log = sharedUtils.debugLog || (() => {});
+
   class VimStateMachine {
     constructor() {
       this.state = 'INSERT';
@@ -71,7 +74,7 @@
         }
       };
 
-      console.log('[Vim-FSM] State machine initialized in INSERT state');
+      log('[Vim-FSM] State machine initialized in INSERT state');
     }
 
     // Add listener for state changes
@@ -113,7 +116,7 @@
         actionData: null
       };
 
-      console.log(`[Vim-FSM] Processing input '${key}' in state '${this.state}'`);
+      log(`[Vim-FSM] Processing input '${key}' in state '${this.state}'`);
 
       // Check for state transitions first
       if (currentStateConfig.transitions) {
@@ -153,7 +156,7 @@
         this.notifyListeners(oldState, this.state, result);
       }
 
-      console.log(`[Vim-FSM] Result:`, result);
+      log(`[Vim-FSM] Result:`, result);
       return result;
     }
 
@@ -162,7 +165,7 @@
       if (this.states[newState]) {
         this.previousState = this.state;
         this.state = newState;
-        console.log(`[Vim-FSM] State changed: ${this.previousState} → ${this.state}`);
+        log(`[Vim-FSM] State changed: ${this.previousState} → ${this.state}`);
       } else {
         console.error(`[Vim-FSM] Invalid state: ${newState}`);
       }
@@ -221,6 +224,6 @@
 
   // Export to global scope
   window.VimStateMachine = VimStateMachine;
-  console.log('[Vim-FSM] VimStateMachine class loaded');
+  log('[Vim-FSM] VimStateMachine class loaded');
 
 })(); 

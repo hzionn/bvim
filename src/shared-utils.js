@@ -3,6 +3,18 @@
 (function () {
   'use strict';
 
+  const DEBUG = Boolean(globalThis.VimExtensionDebug);
+  const debugLog = (...args) => {
+    if (DEBUG) {
+      console.log(...args);
+    }
+  };
+  const debugWarn = (...args) => {
+    if (DEBUG) {
+      console.warn(...args);
+    }
+  };
+
   // Default sites that will be pre-added on first install
   const DEFAULT_SITES = [
     "https://github.com/*",
@@ -32,11 +44,14 @@
   const exportTarget = typeof window !== 'undefined' ? window : globalThis;
 
   exportTarget.VimSharedUtils = {
+    DEBUG,
+    debugLog,
+    debugWarn,
     DEFAULT_SITES,
     escapeRegex,
     siteToRegex,
     urlMatchesSites
   };
 
-  console.log('[Vim-Extension] Shared utilities loaded');
+  debugLog('[Vim-Extension] Shared utilities loaded');
 })(); 

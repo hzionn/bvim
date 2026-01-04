@@ -1,14 +1,18 @@
 (function () {
   'use strict';
 
+  const sharedUtils = window.VimSharedUtils || {};
+  const log = sharedUtils.debugLog || (() => {});
+  const warn = sharedUtils.debugWarn || (() => {});
+
   // Guard against multiple script injections
   if (window.VimExtensionLoaded) {
-    console.log("[Vim-Extension] Content script already loaded, skipping");
+    log("[Vim-Extension] Content script already loaded, skipping");
     return;
   }
   window.VimExtensionLoaded = true;
 
-  console.log("[Vim-Extension] Content script loaded.");
+  log("[Vim-Extension] Content script loaded.");
 
   // Add CSS for cursor color changes
   const addCursorStyles = () => {
@@ -32,7 +36,7 @@
     }
   `;
     document.head.appendChild(style);
-    console.log("[Vim-Extension] Cursor color styles added");
+    log("[Vim-Extension] Cursor color styles added");
   };
 
   // Apply cursor color styles immediately
@@ -54,7 +58,7 @@
 
       // Add listener for state changes
       vimFSM.addListener((stateInfo) => {
-        console.log(`[Vim-Extension] FSM state changed: ${stateInfo.oldState} → ${stateInfo.newState}`);
+        log(`[Vim-Extension] FSM state changed: ${stateInfo.oldState} → ${stateInfo.newState}`);
         updateIndicator();
 
         // Update cursor color for current element
@@ -64,7 +68,7 @@
         }
       });
 
-      console.log("[Vim-Extension] FSM initialized successfully");
+      log("[Vim-Extension] FSM initialized successfully");
       return true;
     }
     return false;
@@ -113,7 +117,7 @@
   // --- State Management ---
 
   // Import shared utilities (injected before this script)
-  const { DEFAULT_SITES, siteToRegex, urlMatchesSites } = window.VimSharedUtils;
+  const { DEFAULT_SITES, siteToRegex, urlMatchesSites } = sharedUtils;
 
   const updateState = () => {
     chrome.storage.sync.get(["sites", "enabled", "coloredIndicator", "coloredCursor"], (data) => {
@@ -121,7 +125,7 @@
       if (!data.sites || data.sites.length === 0) {
         sites = [...DEFAULT_SITES];
         chrome.storage.sync.set({ sites }); // Save defaults to storage
-        console.log("[Vim-Extension] Initialized with default sites");
+        log("[Vim-Extension] Initialized with default sites");
       } else {
         sites = data.sites;
       }
@@ -129,7 +133,7 @@
       enabled = data.enabled !== undefined ? data.enabled : true;
       coloredIndicator = data.coloredIndicator !== undefined ? data.coloredIndicator : true;
       coloredCursor = data.coloredCursor !== undefined ? data.coloredCursor : true;
-      console.log(
+      log(
         `[Vim-Extension] State updated: Enabled=${enabled}, ColoredIndicator=${coloredIndicator}, ColoredCursor=${coloredCursor}, Sites=${JSON.stringify(sites)}`,
       );
       updateIndicator();
@@ -138,7 +142,7 @@
 
   chrome.storage.onChanged.addListener((changes, namespace) => {
     if (namespace === "sync") {
-      console.log("[Vim-Extension] Storage changed, updating state.");
+      log("[Vim-Extension] Storage changed, updating state.");
       updateState();
       if (changes.enabled && !changes.enabled.newValue && vimFSM) {
         vimFSM.setState("INSERT");
@@ -186,10 +190,10 @@
       const cursorClass = vimFSM.getCursorClass();
       if (cursorClass) {
         element.classList.add(cursorClass);
-        console.log(`[Vim-Extension] Applied cursor class '${cursorClass}' for state '${vimFSM.getDisplayName()}'`);
+        log(`[Vim-Extension] Applied cursor class '${cursorClass}' for state '${vimFSM.getDisplayName()}'`);
       }
     } else {
-      console.log("[Vim-Extension] Cursor coloring disabled, not applying colors");
+      log("[Vim-Extension] Cursor coloring disabled, not applying colors");
     }
   };
 
@@ -197,7 +201,7 @@
   // This is a compatibility function for any remaining legacy code
   const setMode = (newMode) => {
     if (!vimFSM) {
-      console.warn("[Vim-Extension] setMode called but FSM not initialized");
+      warn("[Vim-Extension] setMode called but FSM not initialized");
       return;
     }
 
@@ -211,7 +215,7 @@
     if (fsmState) {
       vimFSM.setState(fsmState);
     } else {
-      console.warn(`[Vim-Extension] Unknown mode: ${newMode}`);
+      warn(`[Vim-Extension] Unknown mode: ${newMode}`);
     }
   };
 
@@ -226,7 +230,7 @@
 
       if (siteMatch) {
         updateCursorColor(event.target);
-        console.log("[Vim-Extension] Focus event - updated cursor color");
+        log("[Vim-Extension] Focus event - updated cursor color");
       }
     }
   });
@@ -234,12 +238,12 @@
   document.addEventListener(
     "keydown",
     (event) => {
-      console.log(`[Vim-Extension] Keydown event: ${event.key}`);
+      log(`[Vim-Extension] Keydown event: ${event.key}`);
       const currentUrl = window.location.href;
       currentSiteMatch = urlMatchesSites(currentUrl, sites);
-      console.log(`[Vim-Extension] Current URL: ${currentUrl}`);
-      console.log(`[Vim-Extension] Sites list: ${JSON.stringify(sites)}`);
-      console.log(`[Vim-Extension] Site match: ${currentSiteMatch}, Enabled: ${enabled}`);
+      log(`[Vim-Extension] Current URL: ${currentUrl}`);
+      log(`[Vim-Extension] Sites list: ${JSON.stringify(sites)}`);
+      log(`[Vim-Extension] Site match: ${currentSiteMatch}, Enabled: ${enabled}`);
       updateIndicator();
 
       const activeElement = document.activeElement;
@@ -251,22 +255,22 @@
 
         switch (key) {
           case "arrowleft":
-            console.log("[Vim-Extension] Universal arrow left");
+            log("[Vim-Extension] Universal arrow left");
             event.preventDefault();
             handled = moveLeft(activeElement);
             break;
           case "arrowright":
-            console.log("[Vim-Extension] Universal arrow right");
+            log("[Vim-Extension] Universal arrow right");
             event.preventDefault();
             handled = moveRight(activeElement);
             break;
           case "arrowup":
-            console.log("[Vim-Extension] Universal arrow up");
+            log("[Vim-Extension] Universal arrow up");
             event.preventDefault();
             handled = moveUp(activeElement);
             break;
           case "arrowdown":
-            console.log("[Vim-Extension] Universal arrow down");
+            log("[Vim-Extension] Universal arrow down");
             event.preventDefault();
             handled = moveDown(activeElement);
             break;
@@ -281,11 +285,11 @@
 
       // --- SITE-SPECIFIC VIM FUNCTIONALITY ---
       if (!enabled || !currentSiteMatch) {
-        console.log("[Vim-Extension] Not active on this site or disabled.");
+        log("[Vim-Extension] Not active on this site or disabled.");
         return;
       }
 
-      console.log("[Vim-Extension] Active element:", activeElement);
+      log("[Vim-Extension] Active element:", activeElement);
       if (!isEditable(activeElement)) {
         return;
       }
@@ -295,7 +299,7 @@
 
       // FSM-based input handling
       if (!vimFSM) {
-        console.warn("[Vim-Extension] FSM not initialized, skipping vim processing");
+        warn("[Vim-Extension] FSM not initialized, skipping vim processing");
         return;
       }
 
@@ -322,7 +326,7 @@
       // Execute any action returned by the FSM
       if (result.action && result.actionData) {
         const { element } = result.actionData;
-        console.log(`[Vim-Extension] Executing action: ${result.action}`);
+        log(`[Vim-Extension] Executing action: ${result.action}`);
 
         // Map FSM action names to actual functions
         const actionMap = {
@@ -340,7 +344,7 @@
         if (actionFn) {
           actionFn();
         } else {
-          console.warn(`[Vim-Extension] Unknown action: ${result.action}`);
+          warn(`[Vim-Extension] Unknown action: ${result.action}`);
         }
       }
     },
@@ -348,4 +352,3 @@
   );
 
 })(); // End of IIFE
-

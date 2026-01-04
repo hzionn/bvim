@@ -4,6 +4,9 @@
 (function () {
   'use strict';
 
+  const sharedUtils = window.VimSharedUtils || {};
+  const log = sharedUtils.debugLog || (() => {});
+
   // --- Word boundary utilities ---
   
   // Vim-like character classification
@@ -26,7 +29,7 @@
     const tagName = element.tagName;
     const isEditable =
       tagName === "TEXTAREA" || tagName === "INPUT" || element.isContentEditable;
-    console.log(
+    log(
       `[Vim-Extension] Checking if element is editable: <${element.tagName}>, result: ${isEditable}`,
     );
     return isEditable;
@@ -271,11 +274,11 @@
    * @throws {Error} Implicitly - if element is not editable or positions are invalid
    */
   const deleteText = (element, startPos, endPos) => {
-    console.log(`[Vim-Extension] deleteText called: startPos=${startPos}, endPos=${endPos}`);
+    log(`[Vim-Extension] deleteText called: startPos=${startPos}, endPos=${endPos}`);
 
     if (element.tagName === "TEXTAREA" || element.tagName === "INPUT") {
       const text = element.value;
-      console.log(`[Vim-Extension] Original text: "${text}"`);
+      log(`[Vim-Extension] Original text: "${text}"`);
 
       // Focus and select the text to delete
       element.focus();
@@ -283,7 +286,7 @@
 
       // Method 1: Try using insertText (most modern and compatible)
       if (typeof element.setRangeText === 'function') {
-        console.log(`[Vim-Extension] Using setRangeText method`);
+        log(`[Vim-Extension] Using setRangeText method`);
         element.setRangeText('', startPos, endPos, 'end');
 
         // Fire input event manually
@@ -296,7 +299,7 @@
 
       } else {
         // Method 2: Direct value manipulation with proper events
-        console.log(`[Vim-Extension] Using direct value manipulation`);
+        log(`[Vim-Extension] Using direct value manipulation`);
         const newValue = text.slice(0, startPos) + text.slice(endPos);
 
         // Create a property descriptor to bypass React's value tracking
@@ -314,12 +317,12 @@
         element.dispatchEvent(new Event('change', { bubbles: true, cancelable: true }));
       }
 
-      console.log(`[Vim-Extension] New text: "${element.value}"`);
+      log(`[Vim-Extension] New text: "${element.value}"`);
       setCursorPosition(element, startPos);
 
     } else if (element.isContentEditable) {
       const text = getText(element);
-      console.log(`[Vim-Extension] Original contentEditable text: "${text}"`);
+      log(`[Vim-Extension] Original contentEditable text: "${text}"`);
 
       // Simple and reliable approach for all contentEditable elements
       element.focus();
@@ -346,10 +349,10 @@
     const text = getText(element);
     let endPos = cursor;
 
-    console.log(`[Vim-Extension] deleteWord (dw): cursor=${cursor}, text="${text}", char at cursor="${text[cursor]}"`);
+    log(`[Vim-Extension] deleteWord (dw): cursor=${cursor}, text="${text}", char at cursor="${text[cursor]}"`);
 
     if (cursor >= text.length) {
-      console.log(`[Vim-Extension] deleteWord (dw): cursor at end, nothing to delete`);
+      log(`[Vim-Extension] deleteWord (dw): cursor at end, nothing to delete`);
       return false;
     }
 
@@ -379,13 +382,13 @@
     // For 'dw', also include trailing whitespace
     while (endPos < text.length && isWhitespace(text[endPos])) endPos++;
 
-    console.log(`[Vim-Extension] deleteWord (dw): will delete from ${cursor} to ${endPos}, text to delete: "${text.slice(cursor, endPos)}"`);
+    log(`[Vim-Extension] deleteWord (dw): will delete from ${cursor} to ${endPos}, text to delete: "${text.slice(cursor, endPos)}"`);
 
     if (endPos > cursor) {
       deleteText(element, cursor, endPos);
       return true;
     }
-    console.log(`[Vim-Extension] deleteWord (dw): nothing to delete`);
+    log(`[Vim-Extension] deleteWord (dw): nothing to delete`);
     return false;
   };
 
@@ -398,10 +401,10 @@
     const text = getText(element);
     let endPos = cursor;
 
-    console.log(`[Vim-Extension] changeWord (cw): cursor=${cursor}, text="${text}", char at cursor="${text[cursor]}"`);
+    log(`[Vim-Extension] changeWord (cw): cursor=${cursor}, text="${text}", char at cursor="${text[cursor]}"`);
 
     if (cursor >= text.length) {
-      console.log(`[Vim-Extension] changeWord (cw): cursor at end, nothing to change`);
+      log(`[Vim-Extension] changeWord (cw): cursor at end, nothing to change`);
       return false;
     }
 
@@ -428,13 +431,13 @@
       }
     }
 
-    console.log(`[Vim-Extension] changeWord (cw): will delete from ${cursor} to ${endPos}, text to delete: "${text.slice(cursor, endPos)}"`);
+    log(`[Vim-Extension] changeWord (cw): will delete from ${cursor} to ${endPos}, text to delete: "${text.slice(cursor, endPos)}"`);
 
     if (endPos > cursor) {
       deleteText(element, cursor, endPos);
       return true;
     }
-    console.log(`[Vim-Extension] changeWord (cw): nothing to delete`);
+    log(`[Vim-Extension] changeWord (cw): nothing to delete`);
     return false;
   };
 
@@ -477,6 +480,6 @@
     changeWord
   };
 
-  console.log("[Vim-Extension] VimMotions loaded and ready");
+  log("[Vim-Extension] VimMotions loaded and ready");
 
 })(); 
