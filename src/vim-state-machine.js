@@ -42,6 +42,7 @@
             'l': 'moveRight',
             'w': 'moveWordForward',
             'b': 'moveWordBackward',
+            'e': 'moveWordEnd',
             'arrowleft': 'moveLeft',
             'arrowdown': 'moveDown',
             'arrowup': 'moveUp',

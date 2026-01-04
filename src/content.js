@@ -170,6 +170,7 @@
     moveDown,
     moveWordForward,
     moveWordBackward,
+    moveWordEnd,
     deleteText,
     deleteWord,
     changeWord
@@ -336,6 +337,7 @@
           'moveDown': () => moveDown(element),
           'moveWordForward': () => moveWordForward(element),
           'moveWordBackward': () => moveWordBackward(element),
+          'moveWordEnd': () => moveWordEnd(element),
           'deleteWord': () => deleteWord(element),
           'changeWord': () => changeWord(element)
         };
