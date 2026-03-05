@@ -253,15 +253,17 @@
 
     if (pos >= text.length) return false;
 
-    // Skip initial whitespace to mimic Vim's 'e'
-    while (pos < text.length && isWhitespace(text[pos])) pos++;
+    const initialType = getCharType(text[pos]);
 
-    if (pos >= text.length) {
-      setCursorPosition(element, text.length);
-      return true;
+    // If we start on whitespace, advance to the next non-whitespace group
+    if (initialType === 'whitespace') {
+      while (pos < text.length && isWhitespace(text[pos])) pos++;
+
+      // No next word to move to
+      if (pos >= text.length) return false;
     }
 
-    const targetType = getCharType(text[pos]);
+    const targetType = initialType === 'whitespace' ? getCharType(text[pos]) : initialType;
 
     if (targetType === 'word') {
       while (pos < text.length - 1 && isWordChar(text[pos + 1])) pos++;
